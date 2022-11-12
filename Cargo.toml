@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "avii_lang",
-    "test_src",
+    "test_app",
 ]
