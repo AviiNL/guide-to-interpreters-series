@@ -77,7 +77,18 @@ fn eval_var_decleration(var: VariableDecleration, env: &mut Environment) -> Runt
         None => RuntimeVal::NullVal,
     };
 
-    env.set(&var.identifier.symbol, value.clone());
+    // if it exists, and it's contant, then we can't reassign it
+    // if let Some(existing) = env.get(&var.identifier.symbol) {
+    //     if existing == RuntimeVal::NullVal {
+    //         env.set(&var.identifier.symbol, value.clone());
+    //     } else {
+    //         panic!("Variable {} already defined", var.identifier.symbol);
+    //     }
+    // } else {
+    //     env.set(&var.identifier.symbol, value.clone());
+    // }
+
+    env.set(&var.identifier.symbol, value.clone(), var.constant);
 
     RuntimeVal::NullVal
 }

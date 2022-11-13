@@ -6,6 +6,7 @@ use crate::interpreter::RuntimeVal;
 pub struct Environment {
     parent: Option<Arc<RwLock<Environment>>>,
     pub(crate) variables: HashMap<String, RuntimeVal>,
+    constants: Vec<String>,
 }
 
 impl Environment {
@@ -13,6 +14,7 @@ impl Environment {
         Environment {
             parent: None,
             variables: HashMap::new(),
+            constants: Vec::new(),
         }
     }
 
@@ -20,17 +22,23 @@ impl Environment {
         Environment {
             parent: Some(parent),
             variables: HashMap::new(),
+            constants: Vec::new(),
         }
     }
 
-    pub fn set(&mut self, symbol: &str, value: RuntimeVal) -> RuntimeVal {
+    pub fn set(&mut self, symbol: &str, value: RuntimeVal, is_const: bool) -> RuntimeVal {
 
-        if !self.variables.contains_key(symbol) {
-            self.variables.insert(symbol.to_string(), value.clone());
-            return value;
+        if self.variables.contains_key(symbol) {
+            panic!("Variable {} already defined", symbol);
+        }
+        
+        self.variables.insert(symbol.to_string(), value.clone());
+
+        if is_const {
+            self.constants.push(symbol.to_string());
         }
 
-        panic!("Variable {} already defined", symbol);
+        value
     }
 
     pub fn assign(&mut self, symbol: &str, value: RuntimeVal) -> RuntimeVal {
@@ -39,7 +47,13 @@ impl Environment {
 
         match env {
             Some(mut e) => {
-                e.variables.insert(symbol.to_owned(), value.clone());
+                let symbol = symbol.to_owned();
+
+                if e.constants.contains(&symbol) {
+                    panic!("Cannot assign to constant {}", symbol);
+                }
+
+                e.variables.insert(symbol, value.clone());
                 value
             },
             None => panic!("Variable {} not defined", symbol),
