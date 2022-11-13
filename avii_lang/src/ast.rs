@@ -9,7 +9,7 @@ pub enum StatementOrExpression {
 #[derive(Debug)]
 pub enum Statement {
     Program(Program),
-    Let(Let),
+    VariableDecleration(VariableDecleration),
 }
 
 #[derive(Debug)]
@@ -79,13 +79,24 @@ impl Stmt for NumericLiteral {
 }
 
 #[derive(Debug)]
-pub struct Let {
-    pub symbol: String,
-    pub expr: Box<StatementOrExpression>,
+pub struct VariableDecleration {
+    pub(crate) constant: bool,
+    pub(crate) identifier: Identifier,
+    pub(crate) value: Option<Expression>,
 }
 
-impl Stmt for Let {
+impl VariableDecleration {
+    pub fn new(identifier: String, value: Option<Expression>, constant: bool) -> Self {
+        VariableDecleration {
+            constant,
+            identifier: Identifier { symbol: identifier },
+            value,
+        }
+    }
+}
+
+impl Stmt for VariableDecleration {
     fn node_type(&self) -> String {
-        "Let".to_string()
+        "VariableDecleration".to_string()
     }
 }

@@ -1,17 +1,31 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TokenType {
+    // Literal Types
     Number,
     Identifier,
+    // String,
+    
+    // Keywords
+    Let,
+    Const,
+
+    // Grouping * Operators
+    BinaryOperator,
     Equals,
     OpenParen,
     CloseParen,
-    BinaryOperator,
-    Let,
+
+    // Delimiters
+    Semicolon,
+    // Comma,
+
+    // End of File
     EOF,
 }
 
 static KEYWORDS: &[(&str, TokenType)] = &[
     ("let", TokenType::Let),
+    ("const", TokenType::Const),
 ];
 
 #[derive(Debug)]
@@ -41,6 +55,7 @@ pub fn tokenize(source_code: &str) -> Vec<Token> {
             '/' => tokens.push(Token::new("/".to_string(), TokenType::BinaryOperator)),
             '%' => tokens.push(Token::new("%".to_string(), TokenType::BinaryOperator)),
             '=' => tokens.push(Token::new("=".to_string(), TokenType::Equals)),
+            ';' => tokens.push(Token::new(";".to_string(), TokenType::Semicolon)),
             '0'..='9' => {
                 let mut number = String::new();
                 number.push(c);

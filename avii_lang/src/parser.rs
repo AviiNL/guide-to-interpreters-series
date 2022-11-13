@@ -2,7 +2,7 @@ use crate::ast::{
     Program,
     BinaryExpr,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression,
+    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -48,7 +48,53 @@ impl Parser {
     }
 
     fn parse_stmt(&mut self) -> StatementOrExpression {
-        return self.parse_expr();
+        let current = self.at();
+        match current.t {
+            TokenType::Let => {
+                self.parse_var_decleration()
+            }
+            TokenType::Const => {
+                self.parse_var_decleration()
+            }
+
+            _ => self.parse_expr()
+        }
+
+
+        // return self.parse_expr();
+    }
+
+    fn parse_var_decleration(&mut self) -> StatementOrExpression {
+        let is_const = self.eat().t == TokenType::Const;
+        let identifier = self.expect(TokenType::Identifier);
+        
+        if self.at().t == TokenType::Semicolon {
+            self.eat(); // expect semicolon
+            if is_const { 
+                panic!("Cannot declare a constant without an initial value");
+            }
+
+            return StatementOrExpression::Statement(
+                Statement::VariableDecleration(
+                    VariableDecleration::new(identifier.value, None, is_const)
+                )
+            );
+        }
+
+        self.expect(TokenType::Equals);
+        let expr = match self.parse_expr() {
+            StatementOrExpression::Expression(expr) => expr,
+            _ => panic!("Expected expression")
+        };
+        self.expect(TokenType::Semicolon);
+
+        StatementOrExpression::Statement(
+            Statement::VariableDecleration(
+                VariableDecleration::new(identifier.value, Some(expr), is_const)
+            )
+        )
+
+
     }
 
     fn parse_expr(&mut self) -> StatementOrExpression {

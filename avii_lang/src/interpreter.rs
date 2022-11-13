@@ -1,4 +1,4 @@
-use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier}, environment::Environment};
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration}, environment::Environment};
 
 #[derive(Debug, Clone, Copy)]
 pub enum RuntimeVal {
@@ -71,10 +71,21 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     }
 }
 
+fn eval_var_decleration(var: VariableDecleration, env: &mut Environment) -> RuntimeVal {
+    let value = match var.value {
+        Some(v) => eval_expr(v, env),
+        None => RuntimeVal::NullVal,
+    };
+
+    env.set(&var.identifier.symbol, value.clone());
+
+    RuntimeVal::NullVal
+}
+
 fn eval_stmt(stmt: Statement, env: &mut Environment) -> RuntimeVal {
     match stmt {
-        Statement::Let(_) => {
-            panic!("Not yet implemented");
+        Statement::VariableDecleration(var) => {
+            return eval_var_decleration(var, env);
         },
         Statement::Program(p) => {
             let mut last_val = RuntimeVal::NullVal;
