@@ -26,6 +26,14 @@ impl Environment {
         }
     }
 
+    pub fn with_default_scope(mut self) -> Self {
+        self.variables.insert("PI".to_string(), RuntimeVal::NumberVal(std::f64::consts::PI));
+        self.variables.insert("true".to_string(), RuntimeVal::BoolVal(true));
+        self.variables.insert("false".to_string(), RuntimeVal::BoolVal(false));
+        self.variables.insert("null".to_string(), RuntimeVal::NullVal);
+        self
+    }
+
     pub fn set(&mut self, symbol: &str, value: RuntimeVal, is_const: bool) -> RuntimeVal {
 
         if self.variables.contains_key(symbol) {

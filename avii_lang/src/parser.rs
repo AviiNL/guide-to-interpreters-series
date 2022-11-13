@@ -114,7 +114,7 @@ impl Parser {
                 StatementOrExpression::Expression(expr) => expr,
                 _ => panic!("Expected expression")
             };
-            self.expect(TokenType::Semicolon);
+            // self.expect(TokenType::Semicolon);
             return StatementOrExpression::Expression(
                 Expression::Assignment(
                     Assignment::new(left, value)

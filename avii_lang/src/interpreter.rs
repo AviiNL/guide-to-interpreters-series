@@ -74,7 +74,6 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
                     let symbol = i.symbol;
                     let value = eval_expr(*a.value, env);
                     env.assign(&symbol, value.clone());
-                    println!("{:#?}", env);
                     value
                 },
                 _ => panic!("Cannot assign to non-identifier (yet)"),
