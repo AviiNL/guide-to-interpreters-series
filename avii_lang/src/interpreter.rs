@@ -11,7 +11,12 @@ fn eval_numeric_binary_expr(left: f64, right: f64, op: &str) -> RuntimeVal {
         "+" => RuntimeVal::NumberVal(left + right),
         "-" => RuntimeVal::NumberVal(left - right),
         "*" => RuntimeVal::NumberVal(left * right),
-        "/" => RuntimeVal::NumberVal(left / right),
+        "/" => {
+            if right == 0.0 {
+                panic!("Division by zero");
+            }
+            RuntimeVal::NumberVal(left / right)
+        },
         _ => panic!("Unknown operator {}", op),
     }
 }
