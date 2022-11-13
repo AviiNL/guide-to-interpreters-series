@@ -14,6 +14,7 @@ pub enum Statement {
 
 #[derive(Debug)]
 pub enum Expression {
+    NullLiteral(NullLiteral),
     NumericLiteral(NumericLiteral),
     Identifier(Identifier),
     BinaryExpr(BinaryExpr),
@@ -64,6 +65,20 @@ impl Stmt for Identifier {
         "Identifier".to_string()
     }
 }
+
+
+#[derive(Debug)]
+pub struct NullLiteral {
+    pub value: String,
+}
+
+impl Stmt for NullLiteral {
+    fn node_type(&self) -> String {
+        "NullLiteral".to_string()
+    }
+}
+
+impl Expr for NullLiteral {}
 
 #[derive(Debug)]
 pub struct NumericLiteral {

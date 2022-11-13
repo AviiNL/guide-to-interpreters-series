@@ -1,10 +1,8 @@
 use crate::ast::{
-    Stmt,
     Program,
-    Expr,
     BinaryExpr,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, Let,
+    Identifier, StatementOrExpression, Expression, NullLiteral,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -124,6 +122,10 @@ impl Parser {
                 let token = self.eat();
                 let symbol = token.value;
                 return StatementOrExpression::Expression(Expression::Identifier( Identifier { symbol }));
+            }
+            TokenType::Null => {
+                self.eat();
+                return StatementOrExpression::Expression(Expression::NullLiteral( NullLiteral { value: "null".to_string() }));
             }
             TokenType::OpenParen => {
                 self.eat();

@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TokenType {
+    Null,
     Number,
     Identifier,
     Equals,
@@ -14,6 +13,7 @@ pub enum TokenType {
 
 static KEYWORDS: &[(&str, TokenType)] = &[
     ("let", TokenType::Let),
+    ("null", TokenType::Null),
 ];
 
 #[derive(Debug)]
