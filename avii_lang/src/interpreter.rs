@@ -61,13 +61,30 @@ fn eval_identifier(symbol: Identifier, env: &mut Environment) -> RuntimeVal {
 fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     match expr {
         Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
-        Expression::BinaryExpr(b) => {
+        Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
             let right = eval_expr(*b.right, env);
             let op = b.operator.as_str();
             eval_binary_expr(left, right, op)
         },
+        Expression::Assignment(a) => {
+
+            match *a.assignee {
+                Expression::Identifier(i) => {
+                    let symbol = i.symbol;
+                    let value = eval_expr(*a.value, env);
+                    env.assign(&symbol, value.clone());
+                    println!("{:#?}", env);
+                    value
+                },
+                _ => panic!("Cannot assign to non-identifier (yet)"),
+            }
+        },
         Expression::Identifier(ident) => eval_identifier(ident, env),
+        _ => {
+            println!("Expression: {:?} not yet implemented", expr);
+            RuntimeVal::NullVal
+        },
     }
 }
 
@@ -77,20 +94,9 @@ fn eval_var_decleration(var: VariableDecleration, env: &mut Environment) -> Runt
         None => RuntimeVal::NullVal,
     };
 
-    // if it exists, and it's contant, then we can't reassign it
-    // if let Some(existing) = env.get(&var.identifier.symbol) {
-    //     if existing == RuntimeVal::NullVal {
-    //         env.set(&var.identifier.symbol, value.clone());
-    //     } else {
-    //         panic!("Variable {} already defined", var.identifier.symbol);
-    //     }
-    // } else {
-    //     env.set(&var.identifier.symbol, value.clone());
-    // }
-
     env.set(&var.identifier.symbol, value.clone(), var.constant);
 
-    RuntimeVal::NullVal
+    value
 }
 
 fn eval_stmt(stmt: Statement, env: &mut Environment) -> RuntimeVal {

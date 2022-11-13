@@ -1,8 +1,8 @@
 use crate::ast::{
     Program,
-    BinaryExpr,
+    Binary,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration,
+    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -98,7 +98,31 @@ impl Parser {
     }
 
     fn parse_expr(&mut self) -> StatementOrExpression {
-        return self.parse_additive_expr();
+        self.parse_assignment_expr()
+    }
+
+    fn parse_assignment_expr(&mut self) -> StatementOrExpression {
+        let left = self.parse_additive_expr();
+
+        if self.at().t == TokenType::Equals {
+            self.eat(); // advance past equals
+            let left = match left {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression")
+            };
+            let value = match self.parse_assignment_expr() {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression")
+            };
+            self.expect(TokenType::Semicolon);
+            return StatementOrExpression::Expression(
+                Expression::Assignment(
+                    Assignment::new(left, value)
+                )
+            );
+        }
+
+        left
     }
 
     fn parse_additive_expr(&mut self) -> StatementOrExpression {
@@ -118,7 +142,7 @@ impl Parser {
                 _ => panic!("Expected expression"),
             };
 
-            left = StatementOrExpression::Expression(Expression::BinaryExpr(BinaryExpr {
+            left = StatementOrExpression::Expression(Expression::Binary(Binary {
                 left: Box::new(extracted_left),
                 operator: operator.value,
                 right: Box::new(extracted_right),
@@ -145,7 +169,7 @@ impl Parser {
                 _ => panic!("Expected expression"),
             };
 
-            left = StatementOrExpression::Expression(Expression::BinaryExpr(BinaryExpr {
+            left = StatementOrExpression::Expression(Expression::Binary(Binary {
                 left: Box::new(extracted_left),
                 operator: operator.value,
                 right: Box::new(extracted_right),

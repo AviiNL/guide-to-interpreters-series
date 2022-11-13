@@ -4,7 +4,7 @@ use crate::interpreter::RuntimeVal;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    parent: Option<Arc<RwLock<Environment>>>,
+    parent: Option<Box<Environment>>,
     pub(crate) variables: HashMap<String, RuntimeVal>,
     constants: Vec<String>,
 }
@@ -18,9 +18,9 @@ impl Environment {
         }
     }
 
-    pub fn new_with_parent(parent: Arc<RwLock<Environment>>) -> Self {
+    pub fn new_with_parent(parent: Environment) -> Self {
         Environment {
-            parent: Some(parent),
+            parent: Some(Box::new(parent)),
             variables: HashMap::new(),
             constants: Vec::new(),
         }
@@ -31,7 +31,7 @@ impl Environment {
         if self.variables.contains_key(symbol) {
             panic!("Variable {} already defined", symbol);
         }
-        
+
         self.variables.insert(symbol.to_string(), value.clone());
 
         if is_const {
@@ -46,34 +46,33 @@ impl Environment {
         let env = self.resolve(symbol);
 
         match env {
-            Some(mut e) => {
+            Some(e) => {
                 let symbol = symbol.to_owned();
 
                 if e.constants.contains(&symbol) {
                     panic!("Cannot assign to constant {}", symbol);
                 }
 
-                e.variables.insert(symbol, value.clone());
+                e.variables.insert(symbol.clone(), value.clone());
+
                 value
             },
             None => panic!("Variable {} not defined", symbol),
         }
     }
 
-    pub fn resolve(&self, symbol: &str) -> Option<Environment> {
+    pub fn resolve(&mut self, symbol: &str) -> Option<&mut Environment> {
         if self.variables.contains_key(symbol) {
-            return Some(self.clone());
+            return Some(self);
         }
 
-        if let Some(parent) = &self.parent {
-            return parent.read().unwrap().resolve(symbol);
+        match &mut self.parent {
+            Some(p) => p.resolve(symbol),
+            None => None,
         }
-
-        None
     }
 
-    pub fn get(&self, symbol: &str) -> Option<RuntimeVal> {
-
+    pub fn get(&mut self, symbol: &str) -> Option<RuntimeVal> {
         let env = self.resolve(symbol);
 
         match env {

@@ -16,9 +16,9 @@ pub enum Statement {
 pub enum Expression {
     NumericLiteral(NumericLiteral),
     Identifier(Identifier),
-    BinaryExpr(BinaryExpr),
+    Binary(Binary),
+    Assignment(Assignment),
 }
-
 
 pub trait Stmt {
     fn node_type(&self) -> String;
@@ -38,15 +38,15 @@ impl Stmt for Program {
 }
 
 #[derive(Debug)]
-pub struct BinaryExpr {
+pub struct Binary {
     pub left: Box<Expression>,
     pub operator: String,
     pub right: Box<Expression>,
 }
 
-impl Expr for BinaryExpr {}
+impl Expr for Binary {}
 
-impl Stmt for BinaryExpr {
+impl Stmt for Binary {
     fn node_type(&self) -> String {
         "BinaryExp".to_string()
     }
@@ -98,5 +98,28 @@ impl VariableDecleration {
 impl Stmt for VariableDecleration {
     fn node_type(&self) -> String {
         "VariableDecleration".to_string()
+    }
+}
+
+#[derive(Debug)]
+pub struct Assignment {
+    pub(crate) assignee: Box<Expression>,
+    pub(crate) value: Box<Expression>,
+}
+
+impl Assignment {
+    pub fn new(assignee: Expression, value: Expression) -> Self {
+        Assignment {
+            assignee: Box::new(assignee),
+            value: Box::new(value),
+        }
+    }
+}
+
+impl Expr for Assignment {}
+
+impl Stmt for Assignment {
+    fn node_type(&self) -> String {
+        "Assignment".to_string()
     }
 }
