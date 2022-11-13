@@ -1,9 +1,12 @@
-use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration}, environment::Environment};
+use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy)]
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral}, environment::Environment};
+
+#[derive(Debug, Clone)]
 pub enum RuntimeVal {
     NumberVal(f64),
     BoolVal(bool),
+    ObjectVal(HashMap<String, RuntimeVal>),
     NullVal,
 }
 
@@ -58,8 +61,30 @@ fn eval_identifier(symbol: Identifier, env: &mut Environment) -> RuntimeVal {
     }
 }
 
+fn eval_object_expr(obj: ObjectLiteral, env: &mut Environment) -> RuntimeVal {
+    let mut map = HashMap::new();
+    for prop in obj.into_iter() {
+        let key = prop.key;
+
+        let val = match prop.value {
+            Some(e) => eval_expr(*e, env),
+            None => {
+                match env.get(&key) {
+                    Some(v) => v.clone(),
+                    None => panic!("Property {} not defined", key),
+                }
+            },
+        };
+
+        map.insert(key, val);
+    }
+    RuntimeVal::ObjectVal(map)
+}
+
 fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     match expr {
+        Expression::Identifier(ident) => eval_identifier(ident, env),
+        Expression::ObjectLiteral(obj) => eval_object_expr(obj, env),
         Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
         Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
@@ -79,10 +104,9 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
                 _ => panic!("Cannot assign to non-identifier (yet)"),
             }
         },
-        Expression::Identifier(ident) => eval_identifier(ident, env),
         #[allow(unreachable_patterns)]
         _ => {
-            println!("Expression: {:?} not yet implemented", expr);
+            println!("Expression: {:#?} not yet implemented", expr);
             RuntimeVal::NullVal
         },
     }

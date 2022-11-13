@@ -18,23 +18,15 @@ pub enum Expression {
     Identifier(Identifier),
     Binary(Binary),
     Assignment(Assignment),
+    Property(Property),
+    ObjectLiteral(ObjectLiteral),
+    Member(MemberExpr),
+    Call(CallExpr)
 }
-
-pub trait Stmt {
-    fn node_type(&self) -> String;
-}
-
-pub trait Expr {}
 
 #[derive(Debug)]
 pub struct Program {
     pub body: Vec<StatementOrExpression>,
-}
-
-impl Stmt for Program {
-    fn node_type(&self) -> String {
-        "Program".to_string()
-    }
 }
 
 #[derive(Debug)]
@@ -44,38 +36,14 @@ pub struct Binary {
     pub right: Box<Expression>,
 }
 
-impl Expr for Binary {}
-
-impl Stmt for Binary {
-    fn node_type(&self) -> String {
-        "BinaryExp".to_string()
-    }
-}
-
 #[derive(Debug)]
 pub struct Identifier {
     pub symbol: String,
 }
 
-impl Expr for Identifier {}
-
-impl Stmt for Identifier {
-    fn node_type(&self) -> String {
-        "Identifier".to_string()
-    }
-}
-
 #[derive(Debug)]
 pub struct NumericLiteral {
     pub value: f64,
-}
-
-impl Expr for NumericLiteral {}
-
-impl Stmt for NumericLiteral {
-    fn node_type(&self) -> String {
-        "NumericLiteral".to_string()
-    }
 }
 
 #[derive(Debug)]
@@ -95,12 +63,6 @@ impl VariableDecleration {
     }
 }
 
-impl Stmt for VariableDecleration {
-    fn node_type(&self) -> String {
-        "VariableDecleration".to_string()
-    }
-}
-
 #[derive(Debug)]
 pub struct Assignment {
     pub(crate) assignee: Box<Expression>,
@@ -116,10 +78,51 @@ impl Assignment {
     }
 }
 
-impl Expr for Assignment {}
+#[derive(Debug)]
+pub struct Property {
+    pub(crate) key: String,
+    pub(crate) value: Option<Box<Expression>>,
+}
 
-impl Stmt for Assignment {
-    fn node_type(&self) -> String {
-        "Assignment".to_string()
+impl Property {
+    pub fn new(key: String, value: Expression) -> Self {
+        Property {
+            key,
+            value: Some(Box::new(value)),
+        }
     }
+}
+
+#[derive(Debug)]
+pub struct ObjectLiteral {
+    pub(crate) properties: Vec<Property>,
+}
+
+impl ObjectLiteral {
+    pub fn new(properties: Vec<Property>) -> Self {
+        ObjectLiteral { properties }
+    }
+}
+
+// implement iterator for ObjectLiteral
+impl IntoIterator for ObjectLiteral {
+    type Item = Property;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.properties.into_iter()
+    }
+}
+
+#[derive(Debug)]
+pub struct CallExpr {
+    pub(crate) caller: Box<Expression>,
+    pub(crate) arguments: Vec<Expression>,
+}
+
+#[derive(Debug)]
+pub struct MemberExpr {
+    pub(crate) object: Box<Expression>,
+    pub(crate) property: Box<Expression>,
+    pub(crate) computed: bool,
 }

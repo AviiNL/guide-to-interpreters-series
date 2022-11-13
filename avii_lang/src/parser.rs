@@ -2,7 +2,7 @@ use crate::ast::{
     Program,
     Binary,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment,
+    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -101,8 +101,86 @@ impl Parser {
         self.parse_assignment_expr()
     }
 
+    fn parse_object_expr(&mut self) -> StatementOrExpression {
+
+        if self.at().t != TokenType::OpenBrace {
+            return self.parse_additive_expr();
+        }
+
+        self.eat(); // eat the open brace
+
+        let mut properties = Vec::new();
+
+        while !self.is_eof() && self.at().t != TokenType::CloseBrace {
+
+            let key = self.expect(TokenType::Identifier).value;
+
+            // { key, .. }
+            if self.at().t == TokenType::Comma {
+                self.eat();
+                properties.push(Property {
+                    key,
+                    value: None
+                });
+                continue;
+            }
+
+            // { key }
+            if self.at().t == TokenType::CloseBrace {
+                properties.push(Property {
+                    key,
+                    value: None
+                });
+                continue;
+            }
+            
+            // { key: val, ... }
+            self.expect(TokenType::Colon);
+            let value = match self.parse_expr() {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression")
+            };
+
+            properties.push(Property {
+                key,
+                value: Some(Box::new(value))
+            });
+
+            if self.at().t != TokenType::CloseBrace {
+                self.expect(TokenType::Comma);
+            }
+
+        }
+
+        self.expect(TokenType::CloseBrace);
+        
+        StatementOrExpression::Expression(Expression::ObjectLiteral(
+            ObjectLiteral {
+                properties
+            }
+        ))
+
+
+        //     let key = self.expect(TokenType::Identifier);
+        //     self.expect(TokenType::Colon);
+        //     let value = match self.parse_expr() {
+        //         StatementOrExpression::Expression(expr) => expr,
+        //         _ => panic!("Expected expression")
+        //     };
+
+        //     properties.push((key.value, value));
+
+        //     if self.at().t == TokenType::Comma {
+        //         self.eat();
+        //     }
+        // }
+
+        // self.expect(TokenType::RBrace);
+
+    }
+
     fn parse_assignment_expr(&mut self) -> StatementOrExpression {
-        let left = self.parse_additive_expr();
+        let left = self.parse_object_expr();
 
         if self.at().t == TokenType::Equals {
             self.eat(); // advance past equals
@@ -153,11 +231,11 @@ impl Parser {
     }
 
     fn parse_multiplicitive_expr(&mut self) -> StatementOrExpression {
-        let mut left = self.parse_primary_expr();
+        let mut left = self.parse_call_member_expr();
 
         while self.at().value == "/" || self.at().value == "*" || self.at().value == "%" {
             let operator = self.eat();
-            let right = self.parse_primary_expr();
+            let right = self.parse_call_member_expr();
 
             let extracted_left = match left {
                 StatementOrExpression::Expression(e) => e,
@@ -177,6 +255,110 @@ impl Parser {
         }
 
         left
+    }
+
+    // foo.x()
+    fn parse_call_member_expr(&mut self) -> StatementOrExpression {
+        let member = self.parse_member_expr();
+
+        if self.at().t == TokenType::OpenParen {
+            return StatementOrExpression::Expression(self.parse_call_expr(member));
+        }
+
+        StatementOrExpression::Expression(*member)
+    }
+
+    fn parse_call_expr(&mut self, caller: Box<Expression>) -> Expression {
+        let mut call_expr = Expression::Call(
+            CallExpr {
+                caller,
+                arguments: self.parse_args(),
+            }
+        );
+
+        if self.at().t == TokenType::OpenParen {
+            call_expr = self.parse_call_expr(Box::new(call_expr));
+        }
+
+        call_expr
+    }
+
+    fn parse_args(&mut self) -> Vec<Expression> {
+        self.expect(TokenType::OpenParen);
+
+        let args = if self.at().t == TokenType::CloseParen {
+            Vec::new()
+        } else {
+            self.parse_argument_list()
+        };
+
+        self.expect(TokenType::CloseParen);
+
+        args
+    }
+
+    fn parse_argument_list(&mut self) -> Vec<Expression> {
+        let mut args = Vec::new();
+        args.push(self.parse_expr());
+
+        while self.at().t == TokenType::Comma {
+            self.eat();
+            args.push(self.parse_assignment_expr());
+        }
+
+        args.into_iter().map(|arg| match arg {
+            StatementOrExpression::Expression(expr) => expr,
+            _ => panic!("Expected expression")
+        }).collect()
+    }
+
+    fn parse_member_expr(&mut self) -> Box<Expression> {
+        let mut object = self.parse_primary_expr();
+
+        while self.at().t == TokenType::Dot || self.at().t == TokenType::OpenBracket {
+            let operator = self.eat(); // . or [
+
+            let computed = match operator.t {
+                TokenType::OpenBracket => true,
+                _ => false,
+            };
+
+            let property = match operator.t {
+                TokenType::Dot => {
+                    match self.parse_primary_expr() {
+                        StatementOrExpression::Expression(id) => Some(id),
+                        _ => panic!("Expected expression")
+                    }
+                },
+                _ => {
+                    let p = match self.parse_expr() {
+                        StatementOrExpression::Expression(expr) => Some(expr),
+                        _ => panic!("Expected expression")
+                    };
+    
+                    self.expect(TokenType::CloseBracket);
+
+                    p
+                }
+            };
+
+            let extracted_object = match object {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression")
+            };
+
+            object = StatementOrExpression::Expression(Expression::Member(MemberExpr {
+                object: Box::new(extracted_object),
+                property: Box::new(property.unwrap()),
+                computed,
+            }));
+
+        }
+
+        match object {
+            StatementOrExpression::Expression(expr) => Box::new(expr),
+            _ => panic!("Expected expression")
+        }
     }
 
     fn parse_primary_expr(&mut self) -> StatementOrExpression {

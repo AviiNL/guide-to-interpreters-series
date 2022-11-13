@@ -9,15 +9,25 @@ pub enum TokenType {
     Let,
     Const,
 
+    
     // Grouping * Operators
     BinaryOperator,
     Equals,
     OpenParen,
     CloseParen,
-
+    
     // Delimiters
-    Semicolon,
-    // Comma,
+    Comma,     // ,
+    Colon,     // :
+    Semicolon, // ;
+
+    Dot, // .
+
+    OpenBrace,  // {
+    CloseBrace, // }
+
+    OpenBracket,  // [
+    CloseBracket, // ]
 
     // End of File
     EOF,
@@ -49,6 +59,10 @@ pub fn tokenize(source_code: &str) -> Vec<Token> {
         match c {
             '(' => tokens.push(Token::new("(".to_string(), TokenType::OpenParen)),
             ')' => tokens.push(Token::new(")".to_string(), TokenType::CloseParen)),
+            '{' => tokens.push(Token::new("{".to_string(), TokenType::OpenBrace)),
+            '}' => tokens.push(Token::new("}".to_string(), TokenType::CloseBrace)),
+            '[' => tokens.push(Token::new("[".to_string(), TokenType::OpenBracket)),
+            ']' => tokens.push(Token::new("]".to_string(), TokenType::CloseBracket)),
             '+' => tokens.push(Token::new("+".to_string(), TokenType::BinaryOperator)),
             '-' => tokens.push(Token::new("-".to_string(), TokenType::BinaryOperator)),
             '*' => tokens.push(Token::new("*".to_string(), TokenType::BinaryOperator)),
@@ -56,6 +70,9 @@ pub fn tokenize(source_code: &str) -> Vec<Token> {
             '%' => tokens.push(Token::new("%".to_string(), TokenType::BinaryOperator)),
             '=' => tokens.push(Token::new("=".to_string(), TokenType::Equals)),
             ';' => tokens.push(Token::new(";".to_string(), TokenType::Semicolon)),
+            ':' => tokens.push(Token::new(":".to_string(), TokenType::Colon)),
+            ',' => tokens.push(Token::new(",".to_string(), TokenType::Comma)),
+            '.' => tokens.push(Token::new(".".to_string(), TokenType::Dot)),
             '0'..='9' => {
                 let mut number = String::new();
                 number.push(c);
