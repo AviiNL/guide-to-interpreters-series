@@ -1,8 +1,9 @@
-use crate::ast::{StatementOrExpression, Expression, Statement};
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier}, environment::Environment};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum RuntimeVal {
     NumberVal(f64),
+    BoolVal(bool),
     NullVal,
 }
 
@@ -41,21 +42,36 @@ fn eval_binary_expr(left: RuntimeVal, right: RuntimeVal, op: &str) -> RuntimeVal
     RuntimeVal::NullVal
 }
 
-fn eval_expr(expr: Expression) -> RuntimeVal {
-    match expr {
-        Expression::NullLiteral(_) => RuntimeVal::NullVal,
-        Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
-        Expression::BinaryExpr(b) => {
-            let left = eval_expr(*b.left);
-            let right = eval_expr(*b.right);
-            let op = b.operator.as_str();
-            eval_binary_expr(left, right, op)
+fn eval_identifier(symbol: Identifier, env: &mut Environment) -> RuntimeVal {
+    let symbol = symbol.symbol;
+    let env = env.resolve(&symbol);
+    
+    match env {
+        Some(e) => {
+            let val = match e.get(&symbol) {
+                Some(v) => v,
+                None => RuntimeVal::NullVal,
+            };
+            val.clone()
         },
-        Expression::Identifier(_) => panic!("Identifier not implemented"),
+        None => panic!("Variable {} not defined", symbol),
     }
 }
 
-fn eval_stmt(stmt: Statement) -> RuntimeVal {
+fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
+    match expr {
+        Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
+        Expression::BinaryExpr(b) => {
+            let left = eval_expr(*b.left, env);
+            let right = eval_expr(*b.right, env);
+            let op = b.operator.as_str();
+            eval_binary_expr(left, right, op)
+        },
+        Expression::Identifier(ident) => eval_identifier(ident, env),
+    }
+}
+
+fn eval_stmt(stmt: Statement, env: &mut Environment) -> RuntimeVal {
     match stmt {
         Statement::Let(_) => {
             panic!("Not yet implemented");
@@ -63,16 +79,16 @@ fn eval_stmt(stmt: Statement) -> RuntimeVal {
         Statement::Program(p) => {
             let mut last_val = RuntimeVal::NullVal;
             for stmt in p.body {
-                last_val = evaluate(stmt);
+                last_val = evaluate(stmt, env);
             }
             last_val
         },
     }
 }
 
-pub fn evaluate(ast_node: StatementOrExpression) -> RuntimeVal {
+pub fn evaluate(ast_node: StatementOrExpression, env: &mut Environment) -> RuntimeVal {
     match ast_node {
-        StatementOrExpression::Expression(expr) => eval_expr(expr),
-        StatementOrExpression::Statement(stmt) => eval_stmt(stmt),
+        StatementOrExpression::Expression(expr) => eval_expr(expr, env),
+        StatementOrExpression::Statement(stmt) => eval_stmt(stmt, env),
     }
 }
