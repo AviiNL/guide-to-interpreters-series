@@ -80,6 +80,7 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
             }
         },
         Expression::Identifier(ident) => eval_identifier(ident, env),
+        #[allow(unreachable_patterns)]
         _ => {
             println!("Expression: {:?} not yet implemented", expr);
             RuntimeVal::NullVal

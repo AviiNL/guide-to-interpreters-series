@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::{Arc, RwLock}};
+use std::collections::HashMap;
 
 use crate::interpreter::RuntimeVal;
 
