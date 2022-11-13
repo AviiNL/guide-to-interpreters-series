@@ -5,11 +5,11 @@ use avii_lang::{parser::Parser, interpreter::{self, RuntimeVal}, ast::{Statement
 fn main() {
     println!("REPL {}-{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
     let mut env = Environment::new();
-    
-    env.set("PI", RuntimeVal::NumberVal(3.14159265359));
-    env.set("true", RuntimeVal::BoolVal(true));
-    env.set("false", RuntimeVal::BoolVal(false));
-    env.set("null", RuntimeVal::NullVal);
+
+    env.set("PI", RuntimeVal::NumberVal(3.14159265359), true);
+    env.set("true", RuntimeVal::BoolVal(true), true);
+    env.set("false", RuntimeVal::BoolVal(false), true);
+    env.set("null", RuntimeVal::NullVal, true);
 
     loop {
         let mut input = String::new();
