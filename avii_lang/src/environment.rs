@@ -11,9 +11,16 @@ pub struct Environment {
 
 impl Environment {
     pub fn new() -> Self {
+
+        // Default global environment
+        let mut variables = HashMap::new();
+        variables.insert("true".to_string(), RuntimeVal::BoolVal(true));
+        variables.insert("false".to_string(), RuntimeVal::BoolVal(false));
+        variables.insert("null".to_string(), RuntimeVal::NullVal);
+
         Environment {
             parent: None,
-            variables: HashMap::new(),
+            variables,
             constants: Vec::new(),
         }
     }
@@ -28,9 +35,6 @@ impl Environment {
 
     pub fn with_default_scope(mut self) -> Self {
         self.variables.insert("PI".to_string(), RuntimeVal::NumberVal(std::f64::consts::PI));
-        self.variables.insert("true".to_string(), RuntimeVal::BoolVal(true));
-        self.variables.insert("false".to_string(), RuntimeVal::BoolVal(false));
-        self.variables.insert("null".to_string(), RuntimeVal::NullVal);
         self
     }
 
