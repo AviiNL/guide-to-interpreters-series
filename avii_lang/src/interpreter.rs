@@ -1,6 +1,31 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::{Debug, Display}};
 
-use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr, Function, CallExpr, FunctionDecleration, FunctionLiteral}, environment::Environment};
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr, CallExpr, FunctionDecleration, FunctionLiteral, Condition}, environment::Environment};
+
+// pub type BuiltInFunc = for<'r, 's> fn(&'r [&'r RuntimeVal]) -> RuntimeVal;
+// // trait BuiltInFunc<'a> {}
+
+// // impl<'a, F> BuiltInFunc<'a> for F where F: Fn(&'a [&'a RuntimeVal]) -> RuntimeVal {}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub name: String,
+    pub params: Vec<Identifier>,
+    pub body: Vec<StatementOrExpression>,
+    pub env: Environment,
+}
+
+#[derive(Clone)]
+pub struct BuiltInFunction {
+    pub function: Box<fn(Vec<RuntimeVal>) -> RuntimeVal>,
+}
+
+impl Debug for BuiltInFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BuiltInFunction")
+            .finish()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum RuntimeVal {
@@ -10,7 +35,23 @@ pub enum RuntimeVal {
     ArrayVal(Vec<RuntimeVal>),
     ObjectVal(HashMap<String, RuntimeVal>),
     FunctionVal(Function),
+    BuiltInFunction(BuiltInFunction),
     NullVal,
+}
+
+impl Display for RuntimeVal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuntimeVal::NumberVal(n) => write!(f, "{}", n),
+            RuntimeVal::StringVal(s) => write!(f, "{}", s),
+            RuntimeVal::BoolVal(b) => write!(f, "{}", b),
+            RuntimeVal::ArrayVal(a) => write!(f, "{:?}", a),
+            RuntimeVal::ObjectVal(o) => write!(f, "{:?}", o),
+            RuntimeVal::BuiltInFunction(b) => write!(f, "{:?}", b),
+            RuntimeVal::NullVal => write!(f, "null"),
+            _ => write!(f, "unknown"),
+        }
+    }
 }
 
 fn eval_numeric_binary_expr(left: f64, right: f64, op: &str) -> RuntimeVal {
@@ -228,6 +269,10 @@ fn eval_call_expr(call: CallExpr, env: &mut Environment) -> RuntimeVal {
             }
             last_val
         },
+        RuntimeVal::BuiltInFunction(f) => {
+            let func = *f.function;
+            func(args)
+        },
         _ => RuntimeVal::NullVal,
     }
 }
@@ -241,6 +286,86 @@ fn eval_function_literal(func: FunctionLiteral, env: &mut Environment) -> Runtim
     })
 }
 
+fn eval_conditional_expr(cond: Condition, env: &mut Environment) -> RuntimeVal {
+    let left = cond.left;
+    let right = cond.right;
+    let operator = cond.operator;
+
+    let left = eval_expr(*left, env);
+    let right = eval_expr(*right, env);
+
+    // Boolean operations
+    let left_bool: Option<bool> = match left {
+        RuntimeVal::BoolVal(b) => Some(b),
+        _ => None,
+    };
+
+    let right_bool: Option<bool> = match right {
+        RuntimeVal::BoolVal(b) => Some(b),
+        _ => None,
+    };
+
+    if left_bool.is_some() && right_bool.is_some() {
+        return eval_boolean_expr(left_bool.unwrap(), right_bool.unwrap(), operator);
+    }
+
+    // Numeric operations
+    let left_num: Option<f64> = match left {
+        RuntimeVal::NumberVal(n) => Some(n),
+        _ => None,
+    };
+
+    let right_num: Option<f64> = match right {
+        RuntimeVal::NumberVal(n) => Some(n),
+        _ => None,
+    };
+
+    if left_num.is_some() && right_num.is_some() {
+        return eval_numeric_boolean_expr(left_num.unwrap(), right_num.unwrap(), operator);
+    }
+
+    // String comparison
+    let left_str: Option<String> = match left {
+        RuntimeVal::StringVal(s) => Some(s),
+        _ => None,
+    };
+
+    let right_str: Option<String> = match right {
+        RuntimeVal::StringVal(s) => Some(s),
+        _ => None,
+    };
+
+    if left_str.is_some() && right_str.is_some() {
+        return eval_string_boolean_expr(left_str.unwrap(), right_str.unwrap(), operator);
+    }
+
+    RuntimeVal::BoolVal(false)
+}
+
+fn eval_string_boolean_expr(left: String, right: String, operator: String) -> RuntimeVal {
+    match operator.as_str() {
+        "==" => RuntimeVal::BoolVal(left == right),
+        "!=" => RuntimeVal::BoolVal(left != right),
+        _ => panic!("Invalid operator"),
+    }
+}
+
+fn eval_numeric_boolean_expr(left: f64, right: f64, operator: String) -> RuntimeVal {
+    match operator.as_str() {
+        "==" => RuntimeVal::BoolVal(left == right),
+        "!=" => RuntimeVal::BoolVal(left != right),
+        _ => panic!("Invalid operator"),
+    }
+}
+
+fn eval_boolean_expr(left: bool, right: bool, operator: String) -> RuntimeVal {
+    match operator.as_str() {
+        "==" => RuntimeVal::BoolVal(left == right),
+        "!=" => RuntimeVal::BoolVal(left != right),
+        _ => panic!("Invalid operator"),
+    }
+}
+
 fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     match expr {
         Expression::Identifier(ident) => eval_identifier(ident, env),
@@ -251,6 +376,7 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
         Expression::Member(expr) => eval_member_expr(expr, env),
         Expression::Call(expr) => eval_call_expr(expr, env),
         Expression::FunctionLiteral(f) => eval_function_literal(f, env),
+        Expression::Condition(cond) => eval_conditional_expr(cond, env),
         Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
             let right = eval_expr(*b.right, env);
@@ -313,6 +439,27 @@ fn eval_stmt(stmt: Statement, env: &mut Environment) -> RuntimeVal {
             for stmt in p.body {
                 last_val = evaluate(stmt, env);
             }
+            last_val
+        },
+        Statement::If(cond) => {
+            let test = match eval_expr(*cond.test, env) {
+                RuntimeVal::BoolVal(b) => b,
+                _ => panic!("Condition must be a boolean"),
+            };
+
+            let mut last_val = RuntimeVal::NullVal;
+            if test {
+                for stmt in cond.consequent {
+                    last_val = evaluate(stmt, env);
+                }
+            } else {
+                if let Some(alt) = cond.alternate {
+                    for stmt in alt {
+                        last_val = evaluate(stmt, env);
+                    }
+                }
+            }
+
             last_val
         },
     }

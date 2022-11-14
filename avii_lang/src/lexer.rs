@@ -9,6 +9,8 @@ pub enum TokenType {
     Let,
     Const,
     Func,
+    If,
+    Else,
     
     // Grouping * Operators
     BinaryOperator,
@@ -21,10 +23,12 @@ pub enum TokenType {
     Colon,     // :
     Semicolon, // ;
 
-    Dot, // .
+    Bang, // !
+    Dot,  // .
     
     ArrowFunc,    // =>
     EqualsEquals, // ==
+    NotEquals,    // !=
 
     OpenBrace,  // {
     CloseBrace, // }
@@ -40,6 +44,8 @@ static KEYWORDS: &[(&str, TokenType)] = &[
     ("let", TokenType::Let),
     ("const", TokenType::Const),
     ("func", TokenType::Func),
+    ("if", TokenType::If),
+    ("else", TokenType::Else)
 ];
 
 #[derive(Debug)]
@@ -77,6 +83,14 @@ pub fn tokenize(source_code: &str) -> Vec<Token> {
             '/' => tokens.push(Token::new("/".to_string(), TokenType::BinaryOperator, line)),
             '%' => tokens.push(Token::new("%".to_string(), TokenType::BinaryOperator, line)),
             '^' => tokens.push(Token::new("^".to_string(), TokenType::BinaryOperator, line)),
+            '!' => {
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::new("!=".to_string(), TokenType::NotEquals, line));
+                } else {
+                    tokens.push(Token::new("!".to_string(), TokenType::Bang, line));
+                }
+            }
             '=' => {
                 match chars.peek() {
                     Some('=') => {

@@ -1,8 +1,7 @@
 use crate::ast::{
-    Program,
-    Binary,
-    NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral, ArrayLiteral, FunctionDecleration, FunctionLiteral,
+    ArrayLiteral, Assignment, Binary, CallExpr, Expression, FunctionDecleration, FunctionLiteral,
+    Identifier, MemberExpr, NumericLiteral, ObjectLiteral, Program, Property, Statement,
+    StatementOrExpression, StringLiteral, VariableDecleration, If, Condition,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -50,17 +49,11 @@ impl Parser {
     fn parse_stmt(&mut self) -> StatementOrExpression {
         let current = self.at();
         match current.t {
-            TokenType::Let => {
-                self.parse_var_decleration()
-            }
-            TokenType::Const => {
-                self.parse_var_decleration()
-            },
-            TokenType::Func => {
-                self.parse_func_decleration()
-            },
+            TokenType::Let => self.parse_var_decleration(),
+            TokenType::Const => self.parse_var_decleration(),
+            TokenType::Func => self.parse_func_decleration(),
 
-            _ => self.parse_expr()
+            _ => self.parse_expr(),
         }
     }
 
@@ -68,14 +61,14 @@ impl Parser {
         self.expect(TokenType::Func);
         let identifier = match self.parse_primary_expr() {
             StatementOrExpression::Expression(Expression::Identifier(identifier)) => identifier,
-            _ => panic!("Expected identifier")
+            _ => panic!("Expected identifier"),
         };
         self.expect(TokenType::OpenParen);
         let mut params = Vec::new();
         while !self.is_eof() && self.at().t != TokenType::CloseParen {
             let param = match self.parse_primary_expr() {
                 StatementOrExpression::Expression(Expression::Identifier(identifier)) => identifier,
-                _ => panic!("Expected identifier")
+                _ => panic!("Expected identifier"),
             };
             params.push(param);
             if self.at().t == TokenType::Comma {
@@ -83,45 +76,77 @@ impl Parser {
             }
         }
         self.expect(TokenType::CloseParen);
-        self.expect(TokenType::OpenBrace);
-        let mut body = Vec::new();
-        while !self.is_eof() && self.at().t != TokenType::CloseBrace {
-            let stmt = self.parse_stmt();
-            body.push(stmt);
-        }
-        self.expect(TokenType::CloseBrace);
-        StatementOrExpression::Statement(Statement::FunctionDecleration(FunctionDecleration { identifier, params, body }))
+        let body = self.parse_block();
+        StatementOrExpression::Statement(Statement::FunctionDecleration(FunctionDecleration {
+            identifier,
+            params,
+            body,
+        }))
     }
 
     fn parse_var_decleration(&mut self) -> StatementOrExpression {
         let is_const = self.eat().t == TokenType::Const;
         let identifier = self.expect(TokenType::Identifier);
-        
+
         if self.at().t == TokenType::Semicolon {
             self.eat(); // expect semicolon
-            if is_const { 
+            if is_const {
                 panic!("Cannot declare a constant without an initial value");
             }
 
-            return StatementOrExpression::Statement(
-                Statement::VariableDecleration(
-                    VariableDecleration::new(identifier.value, None, is_const)
-                )
-            );
+            return StatementOrExpression::Statement(Statement::VariableDecleration(
+                VariableDecleration::new(identifier.value, None, is_const),
+            ));
         }
 
         self.expect(TokenType::Equals);
         let expr = match self.parse_expr() {
             StatementOrExpression::Expression(expr) => expr,
-            _ => panic!("Expected expression")
+            _ => panic!("Expected expression"),
         };
         self.expect(TokenType::Semicolon);
 
-        StatementOrExpression::Statement(
-            Statement::VariableDecleration(
-                VariableDecleration::new(identifier.value, Some(expr), is_const)
-            )
-        )
+        StatementOrExpression::Statement(Statement::VariableDecleration(VariableDecleration::new(
+            identifier.value,
+            Some(expr),
+            is_const,
+        )))
+    }
+
+    fn parse_conditional_expr(&mut self) -> StatementOrExpression {
+        // left operator (==, !=) right
+        let left = self.parse_expr();
+        
+        // check if there is a closing paren, if so, return the expression
+        if self.at().t == TokenType::CloseParen {
+            return left;
+        }
+
+        // check if there is an operator
+        let operator = match self.at().t {
+            TokenType::EqualsEquals => self.eat(),
+            TokenType::NotEquals => self.eat(),
+            _ => panic!("Expected operator"),
+        };
+
+        let right = self.parse_expr();
+
+        let left = match left {
+            StatementOrExpression::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+
+        let right = match right {
+            StatementOrExpression::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+
+        StatementOrExpression::Expression(Expression::Condition(Condition {
+            left: Box::new(left),
+            operator: operator.value,
+            right: Box::new(right),
+        }))
+
     }
 
     fn parse_expr(&mut self) -> StatementOrExpression {
@@ -129,7 +154,6 @@ impl Parser {
     }
 
     fn parse_closure_expr(&mut self) -> StatementOrExpression {
-        
         if self.at().t != TokenType::OpenParen {
             return self.parse_additive_expr();
         }
@@ -140,7 +164,7 @@ impl Parser {
         while !self.is_eof() && self.at().t != TokenType::CloseParen {
             let param = match self.parse_primary_expr() {
                 StatementOrExpression::Expression(Expression::Identifier(identifier)) => identifier,
-                _ => panic!("Expected identifier")
+                _ => panic!("Expected identifier"),
             };
             params.push(param);
             if self.at().t == TokenType::Comma {
@@ -151,20 +175,15 @@ impl Parser {
         self.expect(TokenType::CloseParen);
         self.expect(TokenType::ArrowFunc);
 
-        self.expect(TokenType::OpenBrace);
-        let mut body = Vec::new();
-        while !self.is_eof() && self.at().t != TokenType::CloseBrace {
-            let stmt = self.parse_stmt();
-            body.push(stmt);
-        }
-        self.expect(TokenType::CloseBrace);
+        let body = self.parse_block();
 
-        StatementOrExpression::Expression(Expression::FunctionLiteral(FunctionLiteral { params, body }))
-
+        StatementOrExpression::Expression(Expression::FunctionLiteral(FunctionLiteral {
+            params,
+            body,
+        }))
     }
 
     fn parse_array_expr(&mut self) -> StatementOrExpression {
-
         if self.at().t != TokenType::OpenBracket {
             return self.parse_object_expr();
         }
@@ -181,17 +200,17 @@ impl Parser {
         }
         self.expect(TokenType::CloseBracket);
         StatementOrExpression::Expression(Expression::ArrayLiteral(ArrayLiteral {
-            elements: elements.into_iter().map(|e| {
-                match e {
+            elements: elements
+                .into_iter()
+                .map(|e| match e {
                     StatementOrExpression::Expression(expr) => expr,
-                    _ => panic!("Expected expression")
-                }
-            }).collect()
+                    _ => panic!("Expected expression"),
+                })
+                .collect(),
         }))
     }
 
     fn parse_object_expr(&mut self) -> StatementOrExpression {
-
         if self.at().t != TokenType::OpenBrace {
             return self.parse_closure_expr();
         }
@@ -201,53 +220,41 @@ impl Parser {
         let mut properties = Vec::new();
 
         while !self.is_eof() && self.at().t != TokenType::CloseBrace {
-
             let key = self.expect(TokenType::Identifier).value;
 
             // { key, .. }
             if self.at().t == TokenType::Comma {
                 self.eat();
-                properties.push(Property {
-                    key,
-                    value: None
-                });
+                properties.push(Property { key, value: None });
                 continue;
             }
 
             // { key }
             if self.at().t == TokenType::CloseBrace {
-                properties.push(Property {
-                    key,
-                    value: None
-                });
+                properties.push(Property { key, value: None });
                 continue;
             }
-            
+
             // { key: val, ... }
             self.expect(TokenType::Colon);
             let value = match self.parse_expr() {
                 StatementOrExpression::Expression(expr) => expr,
-                _ => panic!("Expected expression")
+                _ => panic!("Expected expression"),
             };
 
             properties.push(Property {
                 key,
-                value: Some(Box::new(value))
+                value: Some(Box::new(value)),
             });
 
             if self.at().t != TokenType::CloseBrace {
                 self.expect(TokenType::Comma);
             }
-
         }
 
         self.expect(TokenType::CloseBrace);
-        
-        StatementOrExpression::Expression(Expression::ObjectLiteral(
-            ObjectLiteral {
-                properties
-            }
-        ))
+
+        StatementOrExpression::Expression(Expression::ObjectLiteral(ObjectLiteral { properties }))
     }
 
     fn parse_assignment_expr(&mut self) -> StatementOrExpression {
@@ -257,18 +264,16 @@ impl Parser {
             self.eat(); // advance past equals
             let left = match left {
                 StatementOrExpression::Expression(expr) => expr,
-                _ => panic!("Expected expression")
+                _ => panic!("Expected expression"),
             };
             let value = match self.parse_assignment_expr() {
                 StatementOrExpression::Expression(expr) => expr,
-                _ => panic!("Expected expression")
+                _ => panic!("Expected expression"),
             };
             // self.expect(TokenType::Semicolon);
-            return StatementOrExpression::Expression(
-                Expression::Assignment(
-                    Assignment::new(left, value)
-                )
-            );
+            return StatementOrExpression::Expression(Expression::Assignment(Assignment::new(
+                left, value,
+            )));
         }
 
         left
@@ -304,7 +309,11 @@ impl Parser {
     fn parse_multiplicitive_expr(&mut self) -> StatementOrExpression {
         let mut left = self.parse_call_member_expr();
 
-        while self.at().value == "/" || self.at().value == "*" || self.at().value == "%" || self.at().value == "^" {
+        while self.at().value == "/"
+            || self.at().value == "*"
+            || self.at().value == "%"
+            || self.at().value == "^"
+        {
             let operator = self.eat();
             let right = self.parse_call_member_expr();
 
@@ -333,19 +342,21 @@ impl Parser {
         let member = self.parse_member_expr();
 
         if self.at().t == TokenType::OpenParen {
-            return StatementOrExpression::Expression(self.parse_call_expr(member));
+            let member = match member {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression"),
+            };
+            return StatementOrExpression::Expression(self.parse_call_expr(Box::new(member)));
         }
 
-        StatementOrExpression::Expression(*member)
+        member
     }
 
     fn parse_call_expr(&mut self, caller: Box<Expression>) -> Expression {
-        let mut call_expr = Expression::Call(
-            CallExpr {
-                caller,
-                arguments: self.parse_args(),
-            }
-        );
+        let mut call_expr = Expression::Call(CallExpr {
+            caller,
+            arguments: self.parse_args(),
+        });
 
         if self.at().t == TokenType::OpenParen {
             call_expr = self.parse_call_expr(Box::new(call_expr));
@@ -379,13 +390,15 @@ impl Parser {
             args.push(self.parse_assignment_expr());
         }
 
-        args.into_iter().map(|arg| match arg {
-            StatementOrExpression::Expression(expr) => expr,
-            _ => panic!("Expected expression")
-        }).collect()
+        args.into_iter()
+            .map(|arg| match arg {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression"),
+            })
+            .collect()
     }
 
-    fn parse_member_expr(&mut self) -> Box<Expression> {
+    fn parse_member_expr(&mut self) -> StatementOrExpression {
         let mut object = self.parse_primary_expr();
 
         while self.at().t == TokenType::Dot || self.at().t == TokenType::OpenBracket {
@@ -397,18 +410,16 @@ impl Parser {
             };
 
             let property = match operator.t {
-                TokenType::Dot => {
-                    match self.parse_primary_expr() {
-                        StatementOrExpression::Expression(id) => Some(id),
-                        _ => panic!("Expected expression")
-                    }
+                TokenType::Dot => match self.parse_primary_expr() {
+                    StatementOrExpression::Expression(id) => Some(id),
+                    _ => panic!("Expected expression"),
                 },
                 _ => {
                     let p = match self.parse_expr() {
                         StatementOrExpression::Expression(expr) => Some(expr),
-                        _ => panic!("Expected expression")
+                        _ => panic!("Expected expression"),
                     };
-    
+
                     self.expect(TokenType::CloseBracket);
 
                     p
@@ -417,7 +428,7 @@ impl Parser {
 
             let extracted_object = match object {
                 StatementOrExpression::Expression(expr) => expr,
-                _ => panic!("Expected expression")
+                _ => panic!("Expected expression"),
             };
 
             object = StatementOrExpression::Expression(Expression::Member(MemberExpr {
@@ -425,33 +436,66 @@ impl Parser {
                 property: Box::new(property.unwrap()),
                 computed,
             }));
-
         }
 
-        match object {
-            StatementOrExpression::Expression(expr) => Box::new(expr),
-            _ => panic!("Expected expression")
+        object
+    }
+
+    fn parse_if_expr(&mut self) -> StatementOrExpression {
+        if self.at().t != TokenType::If {
+            return self.parse_primary_expr();
         }
+
+        self.expect(TokenType::If);
+        self.expect(TokenType::OpenParen);
+        let condition = match self.parse_conditional_expr() {
+            StatementOrExpression::Expression(expr) => expr,
+            _ => panic!("Expected expression"),
+        };
+
+        self.expect(TokenType::CloseParen);
+        let consequent = self.parse_block();
+        let alternate = if self.at().t == TokenType::Else {
+            self.eat();
+            let else_= self.parse_block();
+            Some(else_)
+        } else {
+            None
+        };
+        StatementOrExpression::Statement(Statement::If(If {
+            test: Box::new(condition),
+            consequent,
+            alternate,
+        }))
     }
 
     fn parse_primary_expr(&mut self) -> StatementOrExpression {
-        let tk = self.at().t.clone();
+        let tk = self.at().t;
 
         match tk {
             TokenType::Number => {
                 let token = self.eat();
                 let value = token.value.parse::<f64>().unwrap();
-                return StatementOrExpression::Expression(Expression::NumericLiteral( NumericLiteral { value }));
+                return StatementOrExpression::Expression(Expression::NumericLiteral(
+                    NumericLiteral { value },
+                ));
             }
             TokenType::String => {
                 let token = self.eat();
                 let value = token.value;
-                return StatementOrExpression::Expression(Expression::StringLiteral( StringLiteral { value }));
+                return StatementOrExpression::Expression(Expression::StringLiteral(
+                    StringLiteral { value },
+                ));
             }
             TokenType::Identifier => {
                 let token = self.eat();
                 let symbol = token.value;
-                return StatementOrExpression::Expression(Expression::Identifier( Identifier { symbol }));
+                return StatementOrExpression::Expression(Expression::Identifier(Identifier {
+                    symbol,
+                }));
+            }
+            TokenType::If => {
+                return self.parse_if_expr();
             }
             TokenType::OpenParen => {
                 self.eat();
@@ -461,5 +505,19 @@ impl Parser {
             }
             _ => panic!("Unexpected token: {:?}", self.at()),
         }
+    }
+
+    fn parse_block(&mut self) -> Vec<StatementOrExpression> {
+        let mut body = Vec::new();
+
+        self.expect(TokenType::OpenBrace);
+
+        while self.at().t != TokenType::CloseBrace {
+            body.push(self.parse_expr());
+        }
+
+        self.expect(TokenType::CloseBrace);
+
+        body
     }
 }

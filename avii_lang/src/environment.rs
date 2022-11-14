@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::interpreter::RuntimeVal;
+use crate::{interpreter::{RuntimeVal, BuiltInFunction}};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -11,18 +11,24 @@ pub struct Environment {
 
 impl Environment {
     pub fn new() -> Self {
-
-        // Default global environment
-        let mut variables = HashMap::new();
-        variables.insert("true".to_string(), RuntimeVal::BoolVal(true));
-        variables.insert("false".to_string(), RuntimeVal::BoolVal(false));
-        variables.insert("null".to_string(), RuntimeVal::NullVal);
-
-        Environment {
+        let mut env = Environment {
             parent: None,
-            variables,
+            variables: HashMap::new(),
             constants: Vec::new(),
-        }
+        };
+
+        env.set("true", RuntimeVal::BoolVal(true), true);
+        env.set("false", RuntimeVal::BoolVal(false), true);
+        env.set("null", RuntimeVal::NullVal, true);
+
+        env.set("print", RuntimeVal::BuiltInFunction(BuiltInFunction {
+            function: Box::new(|args| {
+                print!("{}", args[0]);
+                RuntimeVal::NullVal
+            }),
+        }), true);
+
+        env
     }
 
     pub fn new_with_parent(parent: Environment) -> Self {

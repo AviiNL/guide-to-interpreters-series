@@ -1,5 +1,3 @@
-use crate::environment::Environment;
-
 #[derive(Debug, Clone)]
 pub enum StatementOrExpression {
     Statement(Statement),
@@ -11,6 +9,7 @@ pub enum Statement {
     Program(Program),
     VariableDecleration(VariableDecleration),
     FunctionDecleration(FunctionDecleration),
+    If(If),
 }
 
 #[derive(Debug, Clone)]
@@ -25,20 +24,13 @@ pub enum Expression {
     ArrayLiteral(ArrayLiteral),
     Member(MemberExpr),
     Call(CallExpr),
-    FunctionLiteral(FunctionLiteral)
+    FunctionLiteral(FunctionLiteral),
+    Condition(Condition),
 }
 
 #[derive(Debug, Clone)]
 pub struct Program {
     pub body: Vec<StatementOrExpression>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Function {
-    pub name: String,
-    pub params: Vec<Identifier>,
-    pub body: Vec<StatementOrExpression>,
-    pub env: Environment,
 }
 
 #[derive(Debug, Clone)]
@@ -205,4 +197,18 @@ impl FunctionLiteral {
             body,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct If {
+    pub(crate) test: Box<Expression>,
+    pub(crate) consequent: Vec<StatementOrExpression>,
+    pub(crate) alternate: Option<Vec<StatementOrExpression>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Condition {
+    pub(crate) left: Box<Expression>,
+    pub(crate) operator: String,
+    pub(crate) right: Box<Expression>,
 }

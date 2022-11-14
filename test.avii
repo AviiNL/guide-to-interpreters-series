@@ -1,7 +1,9 @@
-func function_taking_closure(c) {
-    c(25, 50)
+func test(a, b) {
+    a + b
 }
 
-function_taking_closure((a, b) => {
-    a + b
-})
+if (test(1, 2) != 3) {
+    print("Yay")
+} else {
+    print("Nay")
+}

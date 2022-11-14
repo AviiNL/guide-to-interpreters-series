@@ -27,10 +27,10 @@ fn main() {
 
         // run the program
         let mut env = Environment::new().with_default_scope();
-        let output = interpreter::evaluate(StatementOrExpression::Statement(Statement::Program(program)), &mut env);
+        interpreter::evaluate(StatementOrExpression::Statement(Statement::Program(program)), &mut env);
 
         // print the output
-        print!("{:#?}", output);
+        // print!("{:#?}", program);
 
         // exit
         std::process::exit(0);
