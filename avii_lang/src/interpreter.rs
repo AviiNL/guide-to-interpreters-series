@@ -214,6 +214,10 @@ fn eval_call_expr(call: CallExpr, env: &mut Environment) -> RuntimeVal {
             // let mut new_env = Environment::new_with_parent(env.clone());
             let mut new_env = f.env;
 
+            if args.len() != f.params.len() {
+                panic!("Invalid number of arguments");
+            }
+
             for (i, arg) in f.params.into_iter().enumerate() {
                 new_env.set(&arg.symbol, args[i].clone(), false);
             }

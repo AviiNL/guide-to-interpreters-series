@@ -1,8 +1,7 @@
-let test = (a, b) => {
-    let closure = (c,d) => {
-        a + b + c + d
-    };
-    closure
-};
+func function_taking_closure(c) {
+    c(25, 50)
+}
 
-test(1, 2)(3,4)
+function_taking_closure((a, b) => {
+    a + b
+})
