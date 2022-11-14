@@ -8,6 +8,7 @@ pub enum TokenType {
     // Keywords
     Let,
     Const,
+    Func,
     
     // Grouping * Operators
     BinaryOperator,
@@ -35,6 +36,7 @@ pub enum TokenType {
 static KEYWORDS: &[(&str, TokenType)] = &[
     ("let", TokenType::Let),
     ("const", TokenType::Const),
+    ("func", TokenType::Func),
 ];
 
 #[derive(Debug)]

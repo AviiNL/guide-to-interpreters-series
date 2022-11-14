@@ -2,7 +2,7 @@ use crate::ast::{
     Program,
     Binary,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral, ArrayLiteral,
+    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral, ArrayLiteral, FunctionDecleration,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -55,10 +55,42 @@ impl Parser {
             }
             TokenType::Const => {
                 self.parse_var_decleration()
-            }
+            },
+            TokenType::Func => {
+                self.parse_func_decleration()
+            },
 
             _ => self.parse_expr()
         }
+    }
+
+    fn parse_func_decleration(&mut self) -> StatementOrExpression {
+        self.expect(TokenType::Func);
+        let identifier = match self.parse_primary_expr() {
+            StatementOrExpression::Expression(Expression::Identifier(identifier)) => identifier,
+            _ => panic!("Expected identifier")
+        };
+        self.expect(TokenType::OpenParen);
+        let mut params = Vec::new();
+        while !self.is_eof() && self.at().t != TokenType::CloseParen {
+            let param = match self.parse_primary_expr() {
+                StatementOrExpression::Expression(Expression::Identifier(identifier)) => identifier,
+                _ => panic!("Expected identifier")
+            };
+            params.push(param);
+            if self.at().t == TokenType::Comma {
+                self.eat();
+            }
+        }
+        self.expect(TokenType::CloseParen);
+        self.expect(TokenType::OpenBrace);
+        let mut body = Vec::new();
+        while !self.is_eof() && self.at().t != TokenType::CloseBrace {
+            let stmt = self.parse_stmt();
+            body.push(stmt);
+        }
+        self.expect(TokenType::CloseBrace);
+        StatementOrExpression::Statement(Statement::FunctionDecleration(FunctionDecleration { identifier, params, body }))
     }
 
     fn parse_var_decleration(&mut self) -> StatementOrExpression {
@@ -283,6 +315,8 @@ impl Parser {
         if self.at().t == TokenType::OpenParen {
             call_expr = self.parse_call_expr(Box::new(call_expr));
         }
+
+        // self.expect(TokenType::Semicolon);
 
         call_expr
     }

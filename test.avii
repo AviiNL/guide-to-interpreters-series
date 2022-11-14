@@ -1,12 +1,10 @@
-let a = "Some|Delimited|String";
-let b = a / "|";
+func test(a, b) {
+    let c = a + b;
+    c
+}
 
 let obj = {
-    foo: "bar",
-    baz: {
-        hello: 42,
-        rawr: b[1]
-    }
+    rawr: test
 };
 
-obj["baz"]["rawr"][0]
+obj.rawr(1, 2) + 5

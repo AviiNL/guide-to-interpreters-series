@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr}, environment::Environment};
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr, Function, CallExpr, FunctionDecleration}, environment::Environment};
 
 #[derive(Debug, Clone)]
 pub enum RuntimeVal {
@@ -9,6 +9,7 @@ pub enum RuntimeVal {
     BoolVal(bool),
     ArrayVal(Vec<RuntimeVal>),
     ObjectVal(HashMap<String, RuntimeVal>),
+    FunctionVal(Function),
     NullVal,
 }
 
@@ -200,6 +201,31 @@ fn eval_object_expr(obj: ObjectLiteral, env: &mut Environment) -> RuntimeVal {
     RuntimeVal::ObjectVal(map)
 }
 
+fn eval_call_expr(call: CallExpr, env: &mut Environment) -> RuntimeVal {
+    let callee = eval_expr(*call.caller, env);
+    let mut args = Vec::new();
+    for arg in call.arguments {
+        args.push(eval_expr(arg, env));
+    }
+
+    match callee {
+        RuntimeVal::FunctionVal(f) => {
+            let mut new_env = Environment::new_with_parent(env.clone());
+
+            for (i, arg) in f.params.into_iter().enumerate() {
+                new_env.set(&arg.symbol, args[i].clone(), false);
+            }
+
+            let mut last_val = RuntimeVal::NullVal;
+            for stmt in f.body {
+                last_val = evaluate(stmt, &mut new_env);
+            }
+            last_val
+        },
+        _ => RuntimeVal::NullVal,
+    }
+}
+
 fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     match expr {
         Expression::Identifier(ident) => eval_identifier(ident, env),
@@ -208,6 +234,7 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
         Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
         Expression::StringLiteral(s) => RuntimeVal::StringVal(s.value),
         Expression::Member(expr) => eval_member_expr(expr, env),
+        Expression::Call(expr) => eval_call_expr(expr, env),
         Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
             let right = eval_expr(*b.right, env);
@@ -245,10 +272,24 @@ fn eval_var_decleration(var: VariableDecleration, env: &mut Environment) -> Runt
     value
 }
 
+fn eval_function_decleration(raw_func: FunctionDecleration, env: &mut Environment) -> RuntimeVal {
+    let name = &raw_func.get_name();
+    let func = RuntimeVal::FunctionVal(Function {
+        name: name.clone(),
+        params: raw_func.params,
+        body: raw_func.body,
+    });
+    env.set(&name, func.clone(), false);
+    func
+}
+
 fn eval_stmt(stmt: Statement, env: &mut Environment) -> RuntimeVal {
     match stmt {
         Statement::VariableDecleration(var) => {
             return eval_var_decleration(var, env);
+        },
+        Statement::FunctionDecleration(func) => {
+            return eval_function_decleration(func, env);
         },
         Statement::Program(p) => {
             let mut last_val = RuntimeVal::NullVal;

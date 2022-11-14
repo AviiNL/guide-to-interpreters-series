@@ -1,16 +1,17 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StatementOrExpression {
     Statement(Statement),
     Expression(Expression),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Program(Program),
     VariableDecleration(VariableDecleration),
+    FunctionDecleration(FunctionDecleration),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     NumericLiteral(NumericLiteral),
     StringLiteral(StringLiteral),
@@ -24,34 +25,41 @@ pub enum Expression {
     Call(CallExpr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
     pub body: Vec<StatementOrExpression>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub name: String,
+    pub params: Vec<Identifier>,
+    pub body: Vec<StatementOrExpression>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Binary {
     pub left: Box<Expression>,
     pub operator: String,
     pub right: Box<Expression>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     pub symbol: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NumericLiteral {
     pub value: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StringLiteral {
     pub value: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VariableDecleration {
     pub(crate) constant: bool,
     pub(crate) identifier: Identifier,
@@ -68,7 +76,28 @@ impl VariableDecleration {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct FunctionDecleration {
+    pub(crate) identifier: Identifier,
+    pub(crate) params: Vec<Identifier>,
+    pub(crate) body: Vec<StatementOrExpression>,
+}
+
+impl FunctionDecleration {
+    pub fn new(identifier: String, params: Vec<String>, body: Vec<StatementOrExpression>) -> Self {
+        FunctionDecleration {
+            identifier: Identifier { symbol: identifier },
+            params: params.into_iter().map(|s| Identifier { symbol: s }).collect(),
+            body,
+        }
+    }
+
+    pub fn get_name(&self) -> String {
+        self.identifier.symbol.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Assignment {
     pub(crate) assignee: Box<Expression>,
     pub(crate) value: Box<Expression>,
@@ -83,7 +112,7 @@ impl Assignment {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Property {
     pub(crate) key: String,
     pub(crate) value: Option<Box<Expression>>,
@@ -98,7 +127,7 @@ impl Property {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ObjectLiteral {
     pub(crate) properties: Vec<Property>,
 }
@@ -119,7 +148,7 @@ impl IntoIterator for ObjectLiteral {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ArrayLiteral {
     pub(crate) elements: Vec<Expression>,
 }
@@ -140,13 +169,13 @@ impl IntoIterator for ArrayLiteral {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallExpr {
     pub(crate) caller: Box<Expression>,
     pub(crate) arguments: Vec<Expression>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemberExpr {
     pub(crate) object: Box<Expression>,
     pub(crate) property: Box<Expression>,
