@@ -25,6 +25,7 @@ fn eval_numeric_binary_expr(left: f64, right: f64, op: &str) -> RuntimeVal {
             RuntimeVal::NumberVal(left / right)
         },
         "%" => RuntimeVal::NumberVal(left % right),
+        "^" => RuntimeVal::NumberVal(left.powf(right)),
         _ => panic!("Unknown operator {}", op),
     }
 }
@@ -210,7 +211,8 @@ fn eval_call_expr(call: CallExpr, env: &mut Environment) -> RuntimeVal {
 
     match callee {
         RuntimeVal::FunctionVal(f) => {
-            let mut new_env = Environment::new_with_parent(env.clone());
+            // let mut new_env = Environment::new_with_parent(env.clone());
+            let mut new_env = f.env;
 
             for (i, arg) in f.params.into_iter().enumerate() {
                 new_env.set(&arg.symbol, args[i].clone(), false);
@@ -278,6 +280,7 @@ fn eval_function_decleration(raw_func: FunctionDecleration, env: &mut Environmen
         name: name.clone(),
         params: raw_func.params,
         body: raw_func.body,
+        env: Environment::new_with_parent(env.clone()),
     });
     env.set(&name, func.clone(), false);
     func

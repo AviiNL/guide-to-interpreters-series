@@ -1,3 +1,5 @@
+use crate::environment::Environment;
+
 #[derive(Debug, Clone)]
 pub enum StatementOrExpression {
     Statement(Statement),
@@ -35,6 +37,7 @@ pub struct Function {
     pub name: String,
     pub params: Vec<Identifier>,
     pub body: Vec<StatementOrExpression>,
+    pub env: Environment,
 }
 
 #[derive(Debug, Clone)]

@@ -1,10 +1,7 @@
 func test(a, b) {
-    let c = a + b;
-    c
+    func test2(c, d) {
+        a + b + c + d
+    }
 }
 
-let obj = {
-    rawr: test
-};
-
-obj.rawr(1, 2) + 5
+test(1, 2)(3, 4)

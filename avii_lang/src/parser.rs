@@ -269,7 +269,7 @@ impl Parser {
     fn parse_multiplicitive_expr(&mut self) -> StatementOrExpression {
         let mut left = self.parse_call_member_expr();
 
-        while self.at().value == "/" || self.at().value == "*" || self.at().value == "%" {
+        while self.at().value == "/" || self.at().value == "*" || self.at().value == "%" || self.at().value == "^" {
             let operator = self.eat();
             let right = self.parse_call_member_expr();
 
