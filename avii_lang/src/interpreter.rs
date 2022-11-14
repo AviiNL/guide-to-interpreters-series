@@ -44,21 +44,23 @@ fn eval_binary_expr(raw_left: RuntimeVal, raw_right: RuntimeVal, op: &str) -> Ru
         return eval_numeric_binary_expr(left.unwrap(), right.unwrap(), op);
     }
 
-    // String Concatination
-    let left: Option<String> = match raw_left {
-        RuntimeVal::StringVal(s) => Some(s),
-        RuntimeVal::NumberVal(n) => Some(n.to_string()),
-        _ => None,
-    };
+    if op == "+" {
+        // String Concatination
+        let left: Option<String> = match raw_left {
+            RuntimeVal::StringVal(s) => Some(s),
+            RuntimeVal::NumberVal(n) => Some(n.to_string()),
+            _ => None,
+        };
 
-    let right: Option<String> = match raw_right {
-        RuntimeVal::StringVal(s) => Some(s),
-        RuntimeVal::NumberVal(n) => Some(n.to_string()),
-        _ => None,
-    };
+        let right: Option<String> = match raw_right {
+            RuntimeVal::StringVal(s) => Some(s),
+            RuntimeVal::NumberVal(n) => Some(n.to_string()),
+            _ => None,
+        };
 
-    if left.is_some() && right.is_some() {
-        return RuntimeVal::StringVal(format!("{}{}", left.unwrap(), right.unwrap()));
+        if left.is_some() && right.is_some() {
+            return RuntimeVal::StringVal(format!("{}{}", left.unwrap(), right.unwrap()));
+        }
     }
 
     RuntimeVal::NullVal
