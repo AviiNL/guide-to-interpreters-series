@@ -101,8 +101,16 @@ fn eval_binary_expr(raw_left: RuntimeVal, raw_right: RuntimeVal, op: &str) -> Ru
 }
 
 fn eval_member_expr(expr: MemberExpr, env: &mut Environment) -> RuntimeVal {
+
     let obj = eval_expr(*expr.object, env);
-    let prop = eval_expr(*expr.property, env);
+    let prop = if expr.computed {
+        eval_expr(*expr.property, env)
+    } else {
+        match *expr.property {
+            Expression::Identifier(s) => RuntimeVal::StringVal(s.symbol),
+            _ => panic!("Invalid property"),
+        }
+    };
 
     let prop_str: Option<String> = match prop {
         RuntimeVal::StringVal(s) => Some(s),
@@ -126,6 +134,17 @@ fn eval_member_expr(expr: MemberExpr, env: &mut Environment) -> RuntimeVal {
                     if index < arr.len() {
                         return arr[index].clone();
                     }
+                }
+            },
+            RuntimeVal::StringVal(s) => {
+                let prop = prop_str.unwrap();
+                let index: usize = match prop.parse() {
+                    Ok(i) => i,
+                    Err(_) => panic!("Invalid index"),
+                };
+
+                if index < s.len() {
+                    return RuntimeVal::StringVal(s.chars().nth(index).unwrap().to_string());
                 }
             },
             _ => {},

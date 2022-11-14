@@ -3,8 +3,10 @@ let b = a / "|";
 
 let obj = {
     foo: "bar",
+    baz: {
+        hello: 42,
+        rawr: b[1]
+    }
 };
 
-let foo = "foo";
-
-obj.foo
+obj["baz"]["rawr"][0]
