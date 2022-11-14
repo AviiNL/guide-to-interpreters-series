@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral}, environment::Environment};
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr}, environment::Environment};
 
 #[derive(Debug, Clone)]
 pub enum RuntimeVal {
     NumberVal(f64),
     StringVal(String),
     BoolVal(bool),
+    ArrayVal(Vec<RuntimeVal>),
     ObjectVal(HashMap<String, RuntimeVal>),
     NullVal,
 }
@@ -27,6 +28,53 @@ fn eval_numeric_binary_expr(left: f64, right: f64, op: &str) -> RuntimeVal {
     }
 }
 
+fn string_concat(raw_left: RuntimeVal, raw_right: RuntimeVal) -> RuntimeVal {
+    // String Concatination
+    let left: Option<String> = match raw_left {
+        RuntimeVal::StringVal(s) => Some(s),
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
+    };
+
+    let right: Option<String> = match raw_right {
+        RuntimeVal::StringVal(s) => Some(s),
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
+    };
+
+    if left.is_some() && right.is_some() {
+        return RuntimeVal::StringVal(format!("{}{}", left.unwrap(), right.unwrap()));
+    }
+
+    RuntimeVal::NullVal
+}
+
+fn string_divide(raw_left: RuntimeVal, raw_right: RuntimeVal) -> RuntimeVal {
+    // produces ArrayVal
+    let left: Option<String> = match raw_left {
+        RuntimeVal::StringVal(s) => Some(s),
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
+    };
+
+    let right: Option<String> = match raw_right {
+        RuntimeVal::StringVal(s) => Some(s),
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
+    };
+
+    // split left by right
+    if left.is_some() && right.is_some() {
+        let mut arr = Vec::new();
+        for s in left.unwrap().split(&right.unwrap()) {
+            arr.push(RuntimeVal::StringVal(s.to_string()));
+        }
+        return RuntimeVal::ArrayVal(arr);
+    }
+
+    RuntimeVal::NullVal
+}
+
 fn eval_binary_expr(raw_left: RuntimeVal, raw_right: RuntimeVal, op: &str) -> RuntimeVal {
 
     // Math
@@ -44,22 +92,43 @@ fn eval_binary_expr(raw_left: RuntimeVal, raw_right: RuntimeVal, op: &str) -> Ru
         return eval_numeric_binary_expr(left.unwrap(), right.unwrap(), op);
     }
 
-    if op == "+" {
-        // String Concatination
-        let left: Option<String> = match raw_left {
-            RuntimeVal::StringVal(s) => Some(s),
-            RuntimeVal::NumberVal(n) => Some(n.to_string()),
-            _ => None,
-        };
+    // String operations
+    match op {
+        "+" => string_concat(raw_left, raw_right),
+        "/" => string_divide(raw_left, raw_right),
+        _ => RuntimeVal::NullVal,
+    }
+}
 
-        let right: Option<String> = match raw_right {
-            RuntimeVal::StringVal(s) => Some(s),
-            RuntimeVal::NumberVal(n) => Some(n.to_string()),
-            _ => None,
-        };
+fn eval_member_expr(expr: MemberExpr, env: &mut Environment) -> RuntimeVal {
+    let obj = eval_expr(*expr.object, env);
+    let prop = eval_expr(*expr.property, env);
 
-        if left.is_some() && right.is_some() {
-            return RuntimeVal::StringVal(format!("{}{}", left.unwrap(), right.unwrap()));
+    let prop_str: Option<String> = match prop {
+        RuntimeVal::StringVal(s) => Some(s),
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
+    };
+
+    if prop_str.is_some() {
+        match obj {
+            RuntimeVal::ObjectVal(obj) => {
+                let prop = prop_str.unwrap();
+                if obj.contains_key(&prop) {
+                    return obj.get(&prop).unwrap().clone();
+                }
+            },
+            RuntimeVal::ArrayVal(arr) => {
+                let prop = prop_str.unwrap();
+                let index: Option<usize> = prop.parse().ok();
+                if index.is_some() {
+                    let index = index.unwrap();
+                    if index < arr.len() {
+                        return arr[index].clone();
+                    }
+                }
+            },
+            _ => {},
         }
     }
 
@@ -80,6 +149,16 @@ fn eval_identifier(symbol: Identifier, env: &mut Environment) -> RuntimeVal {
         },
         None => panic!("Variable {} not defined", symbol),
     }
+}
+
+fn eval_array_expr(array: ArrayLiteral, env: &mut Environment) -> RuntimeVal {
+    let exprs = array.elements;
+    let mut vals = Vec::new();
+    for expr in exprs {
+        let val = eval_expr(expr, env);
+        vals.push(val);
+    }
+    RuntimeVal::ArrayVal(vals)
 }
 
 fn eval_object_expr(obj: ObjectLiteral, env: &mut Environment) -> RuntimeVal {
@@ -106,8 +185,10 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     match expr {
         Expression::Identifier(ident) => eval_identifier(ident, env),
         Expression::ObjectLiteral(obj) => eval_object_expr(obj, env),
+        Expression::ArrayLiteral(exprs) => eval_array_expr(exprs, env),
         Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
         Expression::StringLiteral(s) => RuntimeVal::StringVal(s.value),
+        Expression::Member(expr) => eval_member_expr(expr, env),
         Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
             let right = eval_expr(*b.right, env);

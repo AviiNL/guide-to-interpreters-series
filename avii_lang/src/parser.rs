@@ -2,7 +2,7 @@ use crate::ast::{
     Program,
     Binary,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral,
+    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral, ArrayLiteral,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -59,9 +59,6 @@ impl Parser {
 
             _ => self.parse_expr()
         }
-
-
-        // return self.parse_expr();
     }
 
     fn parse_var_decleration(&mut self) -> StatementOrExpression {
@@ -93,12 +90,37 @@ impl Parser {
                 VariableDecleration::new(identifier.value, Some(expr), is_const)
             )
         )
-
-
     }
 
     fn parse_expr(&mut self) -> StatementOrExpression {
         self.parse_assignment_expr()
+    }
+
+    fn parse_array_expr(&mut self) -> StatementOrExpression {
+
+        if self.at().t != TokenType::OpenBracket {
+            return self.parse_object_expr();
+        }
+
+        self.eat(); // eat the open bracket
+
+        let mut elements = Vec::new();
+        while !self.is_eof() && self.at().t != TokenType::CloseBracket {
+            let expr = self.parse_expr();
+            elements.push(expr);
+            if self.at().t == TokenType::Comma {
+                self.eat();
+            }
+        }
+        self.expect(TokenType::CloseBracket);
+        StatementOrExpression::Expression(Expression::ArrayLiteral(ArrayLiteral {
+            elements: elements.into_iter().map(|e| {
+                match e {
+                    StatementOrExpression::Expression(expr) => expr,
+                    _ => panic!("Expected expression")
+                }
+            }).collect()
+        }))
     }
 
     fn parse_object_expr(&mut self) -> StatementOrExpression {
@@ -159,28 +181,10 @@ impl Parser {
                 properties
             }
         ))
-
-
-        //     let key = self.expect(TokenType::Identifier);
-        //     self.expect(TokenType::Colon);
-        //     let value = match self.parse_expr() {
-        //         StatementOrExpression::Expression(expr) => expr,
-        //         _ => panic!("Expected expression")
-        //     };
-
-        //     properties.push((key.value, value));
-
-        //     if self.at().t == TokenType::Comma {
-        //         self.eat();
-        //     }
-        // }
-
-        // self.expect(TokenType::RBrace);
-
     }
 
     fn parse_assignment_expr(&mut self) -> StatementOrExpression {
-        let left = self.parse_object_expr();
+        let left = self.parse_array_expr();
 
         if self.at().t == TokenType::Equals {
             self.eat(); // advance past equals

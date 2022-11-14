@@ -1,4 +1,10 @@
-let a = "Hello";
-let b = "World";
+let a = "Some|Delimited|String";
+let b = a / "|";
 
-12 + a + " " + b + (1+3) + "!" + 1234.12
+let obj = {
+    foo: "bar",
+};
+
+let foo = "foo";
+
+obj.foo

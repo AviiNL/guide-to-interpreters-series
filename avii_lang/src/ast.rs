@@ -21,6 +21,7 @@ pub enum Expression {
     Assignment(Assignment),
     Property(Property),
     ObjectLiteral(ObjectLiteral),
+    ArrayLiteral(ArrayLiteral),
     Member(MemberExpr),
     Call(CallExpr)
 }
@@ -117,6 +118,27 @@ impl IntoIterator for ObjectLiteral {
 
     fn into_iter(self) -> Self::IntoIter {
         self.properties.into_iter()
+    }
+}
+
+#[derive(Debug)]
+pub struct ArrayLiteral {
+    pub(crate) elements: Vec<Expression>,
+}
+
+impl ArrayLiteral {
+    pub fn new(elements: Vec<Expression>) -> Self {
+        ArrayLiteral { elements }
+    }
+}
+
+// implement iterator for ArrayLiteral
+impl IntoIterator for ArrayLiteral {
+    type Item = Expression;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
     }
 }
 
