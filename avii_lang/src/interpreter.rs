@@ -47,22 +47,14 @@ fn eval_binary_expr(raw_left: RuntimeVal, raw_right: RuntimeVal, op: &str) -> Ru
     // String Concatination
     let left: Option<String> = match raw_left {
         RuntimeVal::StringVal(s) => Some(s),
-        _ => {
-            match raw_left {
-                RuntimeVal::NumberVal(n) => Some(n.to_string()),
-                _ => None,
-            }
-        },
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
     };
 
     let right: Option<String> = match raw_right {
         RuntimeVal::StringVal(s) => Some(s),
-        _ => {
-            match raw_right {
-                RuntimeVal::NumberVal(n) => Some(n.to_string()),
-                _ => None,
-            }
-        },
+        RuntimeVal::NumberVal(n) => Some(n.to_string()),
+        _ => None,
     };
 
     if left.is_some() && right.is_some() {
