@@ -114,6 +114,31 @@ impl Parser {
     }
 
     fn parse_conditional_expr(&mut self) -> StatementOrExpression {
+        let mut left = self.parse_single_conditional_expr();
+
+        // check for AND or OR
+        if self.at().t == TokenType::And || self.at().t == TokenType::Or {
+            let op = self.eat();
+            let new_left = match left {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression"),
+            };
+            let right = match self.parse_conditional_expr() {
+                StatementOrExpression::Expression(expr) => expr,
+                _ => panic!("Expected expression"),
+            };
+
+            left = StatementOrExpression::Expression(Expression::Condition(Condition {
+                left: Box::new(new_left),
+                operator: op.value,
+                right: Box::new(right),
+            }));
+        }
+
+        left
+    }
+
+    fn parse_single_conditional_expr(&mut self) -> StatementOrExpression {
         // left operator (==, !=) right
         let left = self.parse_expr();
         

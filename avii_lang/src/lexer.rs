@@ -26,6 +26,9 @@ pub enum TokenType {
     Bang, // !
     Dot,  // .
     
+    And, // and
+    Or,  // or
+
     ArrowFunc,    // =>
     EqualsEquals, // ==
     NotEquals,    // !=
@@ -45,7 +48,9 @@ static KEYWORDS: &[(&str, TokenType)] = &[
     ("const", TokenType::Const),
     ("func", TokenType::Func),
     ("if", TokenType::If),
-    ("else", TokenType::Else)
+    ("else", TokenType::Else),
+    ("and", TokenType::And),
+    ("or", TokenType::Or),
 ];
 
 #[derive(Debug)]

@@ -362,6 +362,8 @@ fn eval_boolean_expr(left: bool, right: bool, operator: String) -> RuntimeVal {
     match operator.as_str() {
         "==" => RuntimeVal::BoolVal(left == right),
         "!=" => RuntimeVal::BoolVal(left != right),
+        "or" => RuntimeVal::BoolVal(left || right),
+        "and" => RuntimeVal::BoolVal(left && right),
         _ => panic!("Invalid operator"),
     }
 }
