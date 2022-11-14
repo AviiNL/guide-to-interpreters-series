@@ -1,5 +1,3 @@
-// NodeTypes: "Program", "NumericLiteral", "Identifier", "BinaryExp"
-
 #[derive(Debug)]
 pub enum StatementOrExpression {
     Statement(Statement),
@@ -23,7 +21,7 @@ pub enum Expression {
     ObjectLiteral(ObjectLiteral),
     ArrayLiteral(ArrayLiteral),
     Member(MemberExpr),
-    Call(CallExpr)
+    Call(CallExpr),
 }
 
 #[derive(Debug)]
