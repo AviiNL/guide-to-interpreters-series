@@ -5,6 +5,7 @@ use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, Vari
 #[derive(Debug, Clone)]
 pub enum RuntimeVal {
     NumberVal(f64),
+    StringVal(String),
     BoolVal(bool),
     ObjectVal(HashMap<String, RuntimeVal>),
     NullVal,
@@ -26,20 +27,46 @@ fn eval_numeric_binary_expr(left: f64, right: f64, op: &str) -> RuntimeVal {
     }
 }
 
-fn eval_binary_expr(left: RuntimeVal, right: RuntimeVal, op: &str) -> RuntimeVal {
+fn eval_binary_expr(raw_left: RuntimeVal, raw_right: RuntimeVal, op: &str) -> RuntimeVal {
 
-    let left: Option<f64> = match left {
+    // Math
+    let left: Option<f64> = match raw_left {
         RuntimeVal::NumberVal(n) => Some(n),
         _ => None,
     };
 
-    let right: Option<f64> = match right {
+    let right: Option<f64> = match raw_right {
         RuntimeVal::NumberVal(n) => Some(n),
         _ => None,
     };
 
     if left.is_some() && right.is_some() {
         return eval_numeric_binary_expr(left.unwrap(), right.unwrap(), op);
+    }
+
+    // String Concatination
+    let left: Option<String> = match raw_left {
+        RuntimeVal::StringVal(s) => Some(s),
+        _ => {
+            match raw_left {
+                RuntimeVal::NumberVal(n) => Some(n.to_string()),
+                _ => None,
+            }
+        },
+    };
+
+    let right: Option<String> = match raw_right {
+        RuntimeVal::StringVal(s) => Some(s),
+        _ => {
+            match raw_right {
+                RuntimeVal::NumberVal(n) => Some(n.to_string()),
+                _ => None,
+            }
+        },
+    };
+
+    if left.is_some() && right.is_some() {
+        return RuntimeVal::StringVal(format!("{}{}", left.unwrap(), right.unwrap()));
     }
 
     RuntimeVal::NullVal
@@ -86,6 +113,7 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
         Expression::Identifier(ident) => eval_identifier(ident, env),
         Expression::ObjectLiteral(obj) => eval_object_expr(obj, env),
         Expression::NumericLiteral(n) => RuntimeVal::NumberVal(n.value),
+        Expression::StringLiteral(s) => RuntimeVal::StringVal(s.value),
         Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
             let right = eval_expr(*b.right, env);

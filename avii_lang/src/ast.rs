@@ -15,6 +15,7 @@ pub enum Statement {
 #[derive(Debug)]
 pub enum Expression {
     NumericLiteral(NumericLiteral),
+    StringLiteral(StringLiteral),
     Identifier(Identifier),
     Binary(Binary),
     Assignment(Assignment),
@@ -44,6 +45,11 @@ pub struct Identifier {
 #[derive(Debug)]
 pub struct NumericLiteral {
     pub value: f64,
+}
+
+#[derive(Debug)]
+pub struct StringLiteral {
+    pub value: String,
 }
 
 #[derive(Debug)]
