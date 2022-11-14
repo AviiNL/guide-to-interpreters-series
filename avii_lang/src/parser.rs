@@ -2,7 +2,7 @@ use crate::ast::{
     Program,
     Binary,
     NumericLiteral,
-    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral, ArrayLiteral, FunctionDecleration,
+    Identifier, StatementOrExpression, Expression, Statement, VariableDecleration, Assignment, ObjectLiteral, Property, MemberExpr, CallExpr, StringLiteral, ArrayLiteral, FunctionDecleration, FunctionLiteral,
 };
 
 use crate::lexer::{tokenize, Token, TokenType};
@@ -128,6 +128,41 @@ impl Parser {
         self.parse_assignment_expr()
     }
 
+    fn parse_closure_expr(&mut self) -> StatementOrExpression {
+        
+        if self.at().t != TokenType::OpenParen {
+            return self.parse_additive_expr();
+        }
+
+        // let test = (a,b) => { a + b };
+        self.expect(TokenType::OpenParen);
+        let mut params = Vec::new();
+        while !self.is_eof() && self.at().t != TokenType::CloseParen {
+            let param = match self.parse_primary_expr() {
+                StatementOrExpression::Expression(Expression::Identifier(identifier)) => identifier,
+                _ => panic!("Expected identifier")
+            };
+            params.push(param);
+            if self.at().t == TokenType::Comma {
+                self.eat();
+            }
+        }
+
+        self.expect(TokenType::CloseParen);
+        self.expect(TokenType::ArrowFunc);
+
+        self.expect(TokenType::OpenBrace);
+        let mut body = Vec::new();
+        while !self.is_eof() && self.at().t != TokenType::CloseBrace {
+            let stmt = self.parse_stmt();
+            body.push(stmt);
+        }
+        self.expect(TokenType::CloseBrace);
+
+        StatementOrExpression::Expression(Expression::FunctionLiteral(FunctionLiteral { params, body }))
+
+    }
+
     fn parse_array_expr(&mut self) -> StatementOrExpression {
 
         if self.at().t != TokenType::OpenBracket {
@@ -158,7 +193,7 @@ impl Parser {
     fn parse_object_expr(&mut self) -> StatementOrExpression {
 
         if self.at().t != TokenType::OpenBrace {
-            return self.parse_additive_expr();
+            return self.parse_closure_expr();
         }
 
         self.eat(); // eat the open brace

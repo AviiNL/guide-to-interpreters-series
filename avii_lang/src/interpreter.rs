@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr, Function, CallExpr, FunctionDecleration}, environment::Environment};
+use crate::{ast::{StatementOrExpression, Expression, Statement, Identifier, VariableDecleration, ObjectLiteral, ArrayLiteral, MemberExpr, Function, CallExpr, FunctionDecleration, FunctionLiteral}, environment::Environment};
 
 #[derive(Debug, Clone)]
 pub enum RuntimeVal {
@@ -228,6 +228,15 @@ fn eval_call_expr(call: CallExpr, env: &mut Environment) -> RuntimeVal {
     }
 }
 
+fn eval_function_literal(func: FunctionLiteral, env: &mut Environment) -> RuntimeVal {
+    RuntimeVal::FunctionVal(Function {
+        params: func.params,
+        body: func.body,
+        env: env.clone(),
+        name: "closure".to_string(),
+    })
+}
+
 fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
     match expr {
         Expression::Identifier(ident) => eval_identifier(ident, env),
@@ -237,6 +246,7 @@ fn eval_expr(expr: Expression, env: &mut Environment) -> RuntimeVal {
         Expression::StringLiteral(s) => RuntimeVal::StringVal(s.value),
         Expression::Member(expr) => eval_member_expr(expr, env),
         Expression::Call(expr) => eval_call_expr(expr, env),
+        Expression::FunctionLiteral(f) => eval_function_literal(f, env),
         Expression::Binary(b) => {
             let left = eval_expr(*b.left, env);
             let right = eval_expr(*b.right, env);

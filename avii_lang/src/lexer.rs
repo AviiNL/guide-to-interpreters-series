@@ -22,6 +22,9 @@ pub enum TokenType {
     Semicolon, // ;
 
     Dot, // .
+    
+    ArrowFunc,    // =>
+    EqualsEquals, // ==
 
     OpenBrace,  // {
     CloseBrace, // }
@@ -74,7 +77,19 @@ pub fn tokenize(source_code: &str) -> Vec<Token> {
             '/' => tokens.push(Token::new("/".to_string(), TokenType::BinaryOperator, line)),
             '%' => tokens.push(Token::new("%".to_string(), TokenType::BinaryOperator, line)),
             '^' => tokens.push(Token::new("^".to_string(), TokenType::BinaryOperator, line)),
-            '=' => tokens.push(Token::new("=".to_string(), TokenType::Equals, line)),
+            '=' => {
+                match chars.peek() {
+                    Some('=') => {
+                        chars.next();
+                        tokens.push(Token::new("==".to_string(), TokenType::EqualsEquals, line));
+                    }
+                    Some('>') => {
+                        chars.next();
+                        tokens.push(Token::new("=>".to_string(), TokenType::ArrowFunc, line));
+                    }
+                    _ => tokens.push(Token::new("=".to_string(), TokenType::Equals, line)),
+                }
+            },
             ';' => tokens.push(Token::new(";".to_string(), TokenType::Semicolon, line)),
             ':' => tokens.push(Token::new(":".to_string(), TokenType::Colon, line)),
             ',' => tokens.push(Token::new(",".to_string(), TokenType::Comma, line)),

@@ -25,6 +25,7 @@ pub enum Expression {
     ArrayLiteral(ArrayLiteral),
     Member(MemberExpr),
     Call(CallExpr),
+    FunctionLiteral(FunctionLiteral)
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +51,12 @@ pub struct Binary {
 #[derive(Debug, Clone)]
 pub struct Identifier {
     pub symbol: String,
+}
+
+impl Identifier {
+    pub fn new(symbol: String) -> Self {
+        Self { symbol }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -183,4 +190,19 @@ pub struct MemberExpr {
     pub(crate) object: Box<Expression>,
     pub(crate) property: Box<Expression>,
     pub(crate) computed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionLiteral {
+    pub(crate) params: Vec<Identifier>,
+    pub(crate) body: Vec<StatementOrExpression>,
+}
+
+impl FunctionLiteral {
+    pub fn new(params: Vec<Identifier>, body: Vec<StatementOrExpression>) -> Self {
+        FunctionLiteral {
+            params,
+            body,
+        }
+    }
 }
